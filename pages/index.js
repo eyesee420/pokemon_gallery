@@ -2,14 +2,15 @@ import Head from 'next/head';
 import { useState } from 'react';
 import { Inter } from 'next/font/google';
 import styles from '@/styles/Home.module.css';
-import { SimpleGrid, Box, Image, Center, Heading, Input, Button,
+import Image from 'next/image'
+import { SimpleGrid, Box,  Center, Heading, Input, Button,
    Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, 
-   ModalCloseButton, Text ,InputGroup ,InputRightElement } from '@chakra-ui/react';
+   ModalCloseButton, Text ,InputGroup ,InputRightElement , useToast} from '@chakra-ui/react';
 import { SmallCloseIcon } from '@chakra-ui/icons'
 
 
 export async function getStaticProps() {
-  const limit = 50;
+  const limit = 100;
   const response = await fetch(`https://pokeapi.co/api/v2/pokemon/?limit=${limit}`);
   const data = await response.json();
 
@@ -32,7 +33,13 @@ export default function Home({ pokemonData }) {
   const [selectedPokemon, setSelectedPokemon] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 20;
+  const filteredPokemonData = pokemonData.filter((pokemon) =>
+    pokemon.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  const totalPages = Math.ceil(filteredPokemonData.length / itemsPerPage);
+
+
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
@@ -48,17 +55,37 @@ export default function Home({ pokemonData }) {
     setIsModalOpen(false);
   };
 
+  const toast = useToast()
+
   const handlePrevPage = () => {
-    setCurrentPage((prevPage) => prevPage - 1);
+    if (currentPage === 1) {
+      toast({
+        title: 'No Previous',
+        description: "this is the last page",
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      })
+    }else {
+      setCurrentPage((prevPage) => prevPage - 1);
+    }
+
+
   };
 
-  const handleNextPage = () => {
-    setCurrentPage((prevPage) => prevPage + 1);
+const handleNextPage = () => {
+    if (currentPage === totalPages) {
+      toast({
+        title: 'No More Next Pages',
+        description: "this is the last page",
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      })
+    }else {
+      setCurrentPage((prevPage) => prevPage + 1);
+    }
   };
-
-  const filteredPokemonData = pokemonData.filter((pokemon) =>
-    pokemon.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -110,7 +137,10 @@ export default function Home({ pokemonData }) {
                   <Box paddingTop={5}>
                     <Center>
                       <Image
-                        objectFit="cover"
+                      width={100}
+                      height={100}
+                        // objectFit="cover"
+                        priority
                         src={pokemon.sprites.front_shiny}
                         alt=""
                         onClick={() => handlePokemonClick(pokemon)}
@@ -126,17 +156,29 @@ export default function Home({ pokemonData }) {
           </SimpleGrid>
         </Box>
 
-        <Box display="flex" justifyContent="center" mt={4}>
-          <Button disabled={currentPage === 1} onClick={handlePrevPage} mr={2}>
-            Previous
-          </Button>
+        <Box mb={100} display="flex" justifyContent="center" mt={4}>
+        {/* Previous Page Button */}
+        <Button disabled={currentPage === 1} onClick={handlePrevPage} mr={2}>
+          Previous
+        </Button>
+
+        {/* Page Numbers */}
+        {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNum) => (
           <Button
-            disabled={currentItems.length < itemsPerPage}
-            onClick={handleNextPage}
+            key={pageNum}
+            variant={currentPage === pageNum ? 'solid' : 'outline'}
+            onClick={() => setCurrentPage(pageNum)}
+            mr={2}
           >
-            Next
+            {pageNum}
           </Button>
-        </Box>
+        ))}
+
+        {/* Next Page Button */}
+        <Button disabled={currentPage === totalPages} onClick={handleNextPage}>
+          Next
+        </Button>
+      </Box>
 
         <Modal isOpen={isModalOpen} onClose={handleModalClose}>
           <ModalOverlay />
